@@ -126,7 +126,7 @@ export function SeasonManager({ seasons }: Props) {
                   setYear(v)
                   handleYearQuarterChange(v, quarter)
                 }}
-                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full min-w-0 bg-white px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div className="min-w-0">
@@ -138,7 +138,7 @@ export function SeasonManager({ seasons }: Props) {
                   setQuarter(v)
                   handleYearQuarterChange(year, v)
                 }}
-                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full min-w-0 bg-white px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {[1, 2, 3, 4].map(q => (
                   <option key={q} value={q}>Q{q}（{['1-3月', '4-6月', '7-9月', '10-12月'][q - 1]}）</option>

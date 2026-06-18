@@ -81,7 +81,7 @@ export function ActivityDateSeasonPicker({ seasons, defaultDate, defaultSeasonId
             value={seasonId}
             onChange={handleSeasonChange}
             required
-            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full min-w-0 bg-white px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {!seasonId && <option value="">— 請選擇 —</option>}
             {seasons.map(s => (
