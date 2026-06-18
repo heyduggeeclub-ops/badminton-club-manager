@@ -95,34 +95,32 @@ export default async function AttendanceDetailPage({
   debts?.forEach(d => { debtMap[d.member_id] = d.total_owed ?? 0 })
 
   // ── 組合 AttendanceMember 列表 ──
-  const members: AttendanceMember[] = memberIds
-    .map(memberId => {
-      const mem = memberMap[memberId]
-      if (!mem) return null
+  const members: AttendanceMember[] = memberIds.flatMap(memberId => {
+    const mem = memberMap[memberId]
+    if (!mem) return []
 
-      const ar = attMap[memberId] ?? null
-      const reg = regMap[memberId]
+    const ar = attMap[memberId] ?? null
+    const reg = regMap[memberId]
 
-      // 欠款扣掉今日活動部分（避免重複計算）
-      const rawDebt = debtMap[memberId] ?? 0
-      const todayFee = ar?.fee_amount ?? 0
-      const todayIsPending = ar ? ['pending', 'partial'].includes(ar.payment_status) : false
-      const priorDebt = Math.max(0, rawDebt - (todayIsPending ? todayFee : 0))
+    // 欠款扣掉今日活動部分（避免重複計算）
+    const rawDebt = debtMap[memberId] ?? 0
+    const todayFee = ar?.fee_amount ?? 0
+    const todayIsPending = ar ? ['pending', 'partial'].includes(ar.payment_status) : false
+    const priorDebt = Math.max(0, rawDebt - (todayIsPending ? todayFee : 0))
 
-      return {
-        memberId,
-        name: mem.name,
-        displayName: mem.display_name,
-        gender: mem.gender as 'male' | 'female',
-        role: mem.role,
-        debtAmount: priorDebt,
-        attendanceRecord: ar,
-        registrationStatus: reg?.status ?? null,
-        waitlistPosition: reg?.waitlistPosition ?? null,
-        priorSeasonSequence: priorSeqMap[memberId] ?? null,
-      } satisfies AttendanceMember
-    })
-    .filter((m): m is AttendanceMember => m !== null)
+    return [{
+      memberId,
+      name: mem.name,
+      displayName: mem.display_name,
+      gender: mem.gender as 'male' | 'female',
+      role: mem.role,
+      debtAmount: priorDebt,
+      attendanceRecord: ar,
+      registrationStatus: reg?.status ?? null,
+      waitlistPosition: reg?.waitlistPosition ?? null,
+      priorSeasonSequence: priorSeqMap[memberId] ?? null,
+    } satisfies AttendanceMember]
+  })
 
   // ── 排序：已到場 → 正取/遞補 → 候補（依號碼）──
   members.sort((a, b) => {
