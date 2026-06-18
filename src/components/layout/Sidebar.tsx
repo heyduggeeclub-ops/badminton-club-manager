@@ -26,6 +26,7 @@ const navItems = [
 ]
 
 const bottomItems = [
+  { href: '/settings',   label: '系統設定',  icon: Settings },
   { href: '/export',     label: '資料匯出',  icon: FileDown },
   { href: '/audit-logs', label: '操作紀錄',  icon: ScrollText },
 ]
