@@ -108,7 +108,7 @@ export default async function EditActivityPage({ params }: Props) {
               defaultSeasonId={activity.season_id}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="開始時間"
                 type="time"
@@ -125,8 +125,8 @@ export default async function EditActivityPage({ params }: Props) {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
                 <Input
                   label="場館名稱"
                   name="venue_name"
@@ -146,7 +146,7 @@ export default async function EditActivityPage({ params }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="場地數量"
                 type="number"

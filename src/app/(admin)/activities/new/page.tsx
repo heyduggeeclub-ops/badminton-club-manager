@@ -93,13 +93,13 @@ export default async function NewActivityPage() {
               defaultSeasonId={defaultSeason?.id}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label="開始時間" type="time" name="start_time" defaultValue="19:00" required />
               <Input label="結束時間" type="time" name="end_time" defaultValue="21:00" required />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
                 <Input
                   label="場館名稱"
                   name="venue_name"
@@ -119,7 +119,7 @@ export default async function NewActivityPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="場地數量"
                 type="number"

@@ -47,9 +47,9 @@ export function ActivityDateSeasonPicker({ seasons, defaultDate, defaultSeasonId
   const matchedSeason = seasons.find(s => s.id === seasonId)
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* 日期 */}
-      <div className="col-span-1">
+      <div className="md:col-span-1">
         <Input
           label="活動日期"
           type="date"
@@ -61,7 +61,7 @@ export function ActivityDateSeasonPicker({ seasons, defaultDate, defaultSeasonId
       </div>
 
       {/* 所屬季度（跟著日期自動更新） */}
-      <div className="col-span-2">
+      <div className="md:col-span-2">
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
             所屬季度
