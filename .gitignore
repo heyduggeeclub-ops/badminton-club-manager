@@ -1,0 +1,23 @@
+# 環境變數（絕對不能上傳）
+.env.local
+.env*.local
+.env.production
+
+# Next.js 建置產物
+.next/
+out/
+
+# 依賴套件
+node_modules/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# 系統檔
+.DS_Store
+Thumbs.db
+
+# 編輯器
+.vscode/
+.idea/
