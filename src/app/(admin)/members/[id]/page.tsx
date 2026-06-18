@@ -10,7 +10,7 @@ import { formatDate, formatCurrency, getMemberTier, getSeasonLabel } from '@/lib
 import {
   GENDER_LABELS, ROLE_LABELS, STATUS_LABELS,
   ACTIVITY_STATUS_LABELS, PAYMENT_METHOD_LABELS,
-  type Member, type AttendanceRecord,
+  type Member, type AttendanceRecord, type MemberStatus, type MemberRole,
 } from '@/types'
 import Link from 'next/link'
 import { ArrowLeft, Phone, Hash } from 'lucide-react'
@@ -124,9 +124,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           description={`加入日期：${formatDate(member.created_at)}`}
           actions={
             <div className="flex gap-2">
-              <Badge variant={statusVariant[member.status]}>{STATUS_LABELS[member.status as any]}</Badge>
+              <Badge variant={statusVariant[member.status as string]}>{STATUS_LABELS[member.status as MemberStatus]}</Badge>
               <Badge variant={member.role === 'leader' ? 'default' : member.role === 'vice_leader' ? 'info' : 'gray'}>
-                {ROLE_LABELS[member.role as any]}
+                {ROLE_LABELS[member.role as MemberRole]}
               </Badge>
             </div>
           }
