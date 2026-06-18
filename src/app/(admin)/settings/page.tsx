@@ -26,7 +26,7 @@ export default async function SettingsPage() {
             建立新季度後，即可在活動、財務等頁面中選取
           </p>
         </CardHeader>
-        <CardBody>
+        <CardBody className="px-4">
           <SeasonManager seasons={(seasons ?? []) as Season[]} />
         </CardBody>
       </Card>

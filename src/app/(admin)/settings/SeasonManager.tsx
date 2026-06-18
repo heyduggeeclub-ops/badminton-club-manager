@@ -110,11 +110,11 @@ export function SeasonManager({ seasons }: Props) {
 
       {/* 新增表單 */}
       {showForm ? (
-        <div className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/40 space-y-3">
+        <div className="border border-indigo-100 rounded-xl p-3 bg-indigo-50/40 space-y-3 overflow-hidden">
           <p className="text-sm font-medium text-gray-700">新增季度</p>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs text-gray-500 mb-1">年份</label>
               <input
                 type="number"
@@ -126,10 +126,10 @@ export function SeasonManager({ seasons }: Props) {
                   setYear(v)
                   handleYearQuarterChange(v, quarter)
                 }}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs text-gray-500 mb-1">季度</label>
               <select
                 value={quarter}
@@ -138,7 +138,7 @@ export function SeasonManager({ seasons }: Props) {
                   setQuarter(v)
                   handleYearQuarterChange(year, v)
                 }}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {[1, 2, 3, 4].map(q => (
                   <option key={q} value={q}>Q{q}（{['1-3月', '4-6月', '7-9月', '10-12月'][q - 1]}）</option>
@@ -147,7 +147,7 @@ export function SeasonManager({ seasons }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div className="min-w-0">
               <Input
                 label="開始日期"
