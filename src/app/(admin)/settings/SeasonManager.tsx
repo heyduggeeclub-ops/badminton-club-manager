@@ -148,18 +148,22 @@ export function SeasonManager({ seasons }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input
-              label="開始日期"
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
-            <Input
-              label="結束日期"
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
+            <div className="min-w-0">
+              <Input
+                label="開始日期"
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="min-w-0">
+              <Input
+                label="結束日期"
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
 
           {error && <p className="text-xs text-red-500">{error}</p>}

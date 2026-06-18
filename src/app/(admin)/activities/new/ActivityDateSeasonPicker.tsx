@@ -49,7 +49,7 @@ export function ActivityDateSeasonPicker({ seasons, defaultDate, defaultSeasonId
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* 日期 */}
-      <div className="md:col-span-1">
+      <div className="min-w-0 md:col-span-1">
         <Input
           label="活動日期"
           type="date"
