@@ -76,7 +76,7 @@ export default async function NewActivityPage() {
       </div>
 
       <form action={handleCreate}>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <h2 className="font-semibold text-gray-800">基本資訊</h2>
           </CardHeader>

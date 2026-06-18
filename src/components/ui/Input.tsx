@@ -11,7 +11,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, hint, className, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s/g, '-')
     return (
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0 w-full">
         {label && (
           <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
             {label}
@@ -47,7 +47,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, hint, className, id, children, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s/g, '-')
     return (
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0 w-full">
         {label && (
           <label htmlFor={selectId} className="block text-sm font-medium text-gray-700">
             {label}
@@ -85,7 +85,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, hint, className, id, ...props }, ref) => {
     const textareaId = id || label?.toLowerCase().replace(/\s/g, '-')
     return (
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0 w-full">
         {label && (
           <label htmlFor={textareaId} className="block text-sm font-medium text-gray-700">
             {label}

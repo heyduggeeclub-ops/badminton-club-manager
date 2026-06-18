@@ -91,7 +91,7 @@ export default async function EditActivityPage({ params }: Props) {
       </div>
 
       <form action={handleUpdate}>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <h2 className="font-semibold text-gray-800">基本資訊</h2>
           </CardHeader>
