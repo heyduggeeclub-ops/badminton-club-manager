@@ -40,13 +40,13 @@ export default async function AttendanceDetailPage({
   // ── 依報名名單取成員資料（不限 status，包含已停用會員）──
   const memberIds = [...new Set(regList.map(r => r.member_id))]
 
-  type MemberRow = { id: string; name: string; display_name: string | null; gender: string }
+  type MemberRow = { id: string; name: string; display_name: string | null; gender: string; role: string }
   let memberMap: Record<string, MemberRow> = {}
 
   if (memberIds.length > 0) {
     const { data: memberRows } = await supabase
       .from('members')
-      .select('id, name, display_name, gender')
+      .select('id, name, display_name, gender, role')
       .in('id', memberIds)
       .in('status', ['active', 'pending'])   // 停用帳號不顯示
     memberRows?.forEach(m => { memberMap[m.id] = m })

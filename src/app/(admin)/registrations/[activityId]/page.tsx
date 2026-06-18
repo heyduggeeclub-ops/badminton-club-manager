@@ -21,7 +21,7 @@ async function getPageData(activityId: string) {
   // 所有在籍/待確認會員
   const { data: members } = await supabase
     .from('members')
-    .select('id, name, display_name, gender')
+    .select('id, name, display_name, gender, role')
     .in('status', ['active', 'pending'])
     .order('name')
 
