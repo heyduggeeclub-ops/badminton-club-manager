@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ActivityStatusBadge } from '@/components/activities/ActivityStatusBadge'
 import { formatDate, formatTime } from '@/lib/utils'
+import type { ActivityStatus } from '@/types'
 import Link from 'next/link'
 import { Search, X, MapPin, Clock, Users } from 'lucide-react'
 
@@ -14,7 +15,7 @@ interface ActivityRow {
   venue_name: string
   court_count: number
   max_per_court: number
-  status: string
+  status: ActivityStatus
   confirmedCount: number
   waitlistCount: number
 }
