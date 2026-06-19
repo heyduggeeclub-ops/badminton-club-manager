@@ -76,7 +76,7 @@ export async function updateMember(id: string, input: Partial<CreateMemberInput>
   })
 
   revalidatePath('/members')
-  revalidatePath(`/members/${id}`)
+  redirect(`/members/${id}`)
 }
 
 export async function deactivateMember(id: string, reason?: string) {
