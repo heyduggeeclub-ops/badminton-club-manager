@@ -107,8 +107,50 @@ export function MemberListClient({ members }: Props) {
         )}
       </div>
 
-      {/* 表格 */}
-      <div className="overflow-x-auto">
+      {/* 手機版：Card Layout */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {filtered.length > 0 ? filtered.map(member => (
+          <div key={member.id} className={`px-4 py-3 flex items-center gap-3 ${member.status === 'inactive' ? 'opacity-60' : ''}`}>
+            {/* 左側：牌位圖示 */}
+            <div className="flex-shrink-0">
+              <TierBadge seasonSequence={member.attended} role={member.role} size="sm" />
+            </div>
+
+            {/* 中間：主要資訊 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-900">{member.name}</span>
+                {member.display_name && (
+                  <span className="text-xs text-gray-400">({member.display_name})</span>
+                )}
+                <Badge variant={roleVariant[member.role]}>{ROLE_LABELS[member.role]}</Badge>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                <span>出席 {member.attended} 次</span>
+                {member.owed > 0
+                  ? <span className="text-red-500 font-medium">欠款 {formatCurrency(member.owed)}</span>
+                  : <span className="text-green-600">無欠款</span>
+                }
+              </div>
+            </div>
+
+            {/* 右側：詳情按鈕 */}
+            <Link
+              href={`/members/${member.id}`}
+              className="flex-shrink-0 text-xs text-indigo-600 font-medium bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              詳細
+            </Link>
+          </div>
+        )) : (
+          <p className="px-4 py-10 text-center text-sm text-gray-400">
+            {q ? `找不到「${search}」的會員` : statusTab === 'inactive' ? '無停用會員' : '尚無會員'}
+          </p>
+        )}
+      </div>
+
+      {/* 桌機版：Table Layout */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
