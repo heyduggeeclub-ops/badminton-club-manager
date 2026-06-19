@@ -81,18 +81,20 @@ export function SeasonManager({ seasons }: Props) {
           const isCurrent = today >= s.start_date && today <= s.end_date
           const isFuture = today < s.start_date
           return (
-            <div key={s.id} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <CalendarDays size={16} className="text-gray-400" />
-                <div>
-                  <span className="text-sm font-medium text-gray-800">{label}</span>
-                  {isCurrent && (
-                    <span className="ml-2 text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">本季</span>
-                  )}
-                  {isFuture && (
-                    <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">未來</span>
-                  )}
-                  <p className="text-xs text-gray-400 mt-0.5">{s.start_date} ～ {s.end_date}</p>
+            <div key={s.id} className="flex items-center justify-between py-3 min-w-0 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <CalendarDays size={16} className="text-gray-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-800">{label}</span>
+                    {isCurrent && (
+                      <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">本季</span>
+                    )}
+                    {isFuture && (
+                      <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">未來</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{s.start_date} ～ {s.end_date}</p>
                 </div>
               </div>
               <button
@@ -147,7 +149,8 @@ export function SeasonManager({ seasons }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
+          {/* 開始/結束日期 — 2 欄並排，min-w-0 防止 iOS date 跑版 */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="min-w-0">
               <Input
                 label="開始日期"

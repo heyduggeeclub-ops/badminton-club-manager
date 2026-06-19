@@ -50,21 +50,23 @@ function TierTable({
 
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {[{ label: '男性', tiers: maleTiers }, { label: '女性', tiers: femaleTiers }].map(({ label, tiers }) => (
           <div key={label}>
             <p className="text-xs font-semibold text-gray-500 mb-2">{label}</p>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {tiers.map(t => (
-                <div key={t.id} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-20 flex-shrink-0">{tierLabel(t)}</span>
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-1">
-                    <span className="px-2 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 py-1.5">$</span>
+                <div key={t.id} className="flex items-center gap-2 min-w-0">
+                  {/* 標籤固定寬度，確保不截斷中文 */}
+                  <span className="text-xs text-gray-500 flex-shrink-0 w-[6.5rem] leading-tight">{tierLabel(t)}</span>
+                  {/* 金額輸入框 — flex-1 + min-w-0 確保不溢出 */}
+                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-1 min-w-0">
+                    <span className="px-2 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 py-2 flex-shrink-0">$</span>
                     <input
                       type="number"
                       value={amounts[t.id]}
                       onChange={e => setAmounts(prev => ({ ...prev, [t.id]: Number(e.target.value) }))}
-                      className="flex-1 px-2 py-1.5 text-sm text-gray-800 focus:outline-none min-w-0"
+                      className="flex-1 min-w-0 px-2 py-2 text-sm text-gray-800 focus:outline-none"
                       min={0}
                       step={10}
                     />
@@ -114,23 +116,23 @@ function RoleFeesSection({ rule, onSaved }: { rule: FeeRuleWithTiers; onSaved: (
     <div className="mt-5 pt-4 border-t border-gray-100">
       <p className="text-sm font-semibold text-gray-700 mb-1">幹部固定費用</p>
       <p className="text-xs text-gray-400 mb-3">設定後，該角色打卡費用固定為此金額（不走階梯）；留空則與一般會員相同。</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {[
           { label: '團長', value: leaderFee, set: setLeaderFee },
           { label: '副團長', value: viceLeaderFee, set: setViceLeaderFee },
         ].map(({ label, value, set }) => (
-          <div key={label}>
+          <div key={label} className="min-w-0">
             <p className="text-xs font-medium text-gray-500 mb-1.5">{label}</p>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-              <span className="px-2 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 py-1.5">$</span>
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden min-w-0">
+              <span className="px-2 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 py-2 flex-shrink-0">$</span>
               <input
                 type="number"
                 value={value}
                 onChange={e => set(e.target.value)}
-                placeholder="與一般相同"
+                placeholder="同一般"
                 min={0}
                 step={10}
-                className="flex-1 px-2 py-1.5 text-sm text-gray-800 focus:outline-none min-w-0"
+                className="flex-1 min-w-0 px-2 py-2 text-sm text-gray-800 focus:outline-none"
               />
             </div>
           </div>

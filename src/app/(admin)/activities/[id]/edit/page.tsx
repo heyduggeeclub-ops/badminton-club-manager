@@ -108,7 +108,8 @@ export default async function EditActivityPage({ params }: Props) {
               defaultSeasonId={activity.season_id}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 開始/結束時間 — 手機也 2 欄並排 */}
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 label="開始時間"
                 type="time"
@@ -125,46 +126,41 @@ export default async function EditActivityPage({ params }: Props) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <Input
-                  label="場館名稱"
-                  name="venue_name"
-                  defaultValue={activity.venue_name}
-                  required
-                />
-              </div>
-              <div>
-                <Input
-                  label="場地費用"
-                  type="number"
-                  name="venue_cost"
-                  min={0}
-                  defaultValue={currentVenueCost}
-                  hint="自動同步至財務支出"
-                />
-              </div>
-            </div>
+            {/* 場館名稱 — 全寬 */}
+            <Input
+              label="場館名稱"
+              name="venue_name"
+              defaultValue={activity.venue_name}
+              required
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 場地數 + 每場上限 + 場地費用 — 3 欄 */}
+            <div className="grid grid-cols-3 gap-3">
               <Input
-                label="場地數量"
+                label="場地數"
                 type="number"
                 name="court_count"
                 min={1}
                 max={10}
                 defaultValue={activity.court_count}
-                hint="可報名人數 = 場地數 × 每場最大人數"
                 required
               />
               <Input
-                label="每場最大人數"
+                label="每場上限"
                 type="number"
                 name="max_per_court"
                 min={1}
                 max={20}
                 defaultValue={activity.max_per_court}
                 required
+              />
+              <Input
+                label="場地費用"
+                type="number"
+                name="venue_cost"
+                min={0}
+                defaultValue={currentVenueCost}
+                hint="自動入帳"
               />
             </div>
 
