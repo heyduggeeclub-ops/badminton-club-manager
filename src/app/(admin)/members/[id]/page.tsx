@@ -20,37 +20,44 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: member } = await supabase
-    .from('members')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const today = new Date().toISOString().split('T')[0]
+
+  // ── Batch 1：member、season、attendance、fee_rule 全部並行 ───────────
+  const [
+    { data: member },
+    { data: season },
+    { data: attendance },
+    { data: activeFeeRule },
+  ] = await Promise.all([
+    supabase
+      .from('members')
+      .select('*')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('seasons')
+      .select('id, year, quarter')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single(),
+    supabase
+      .from('attendance_records')
+      .select(`*, activity:activities(id, activity_date, venue_name, status)`)
+      .eq('member_id', id)
+      .eq('checked_in', true)
+      .order('checked_in_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('fee_rules')
+      .select('id')
+      .eq('is_active', true)
+      .single(),
+  ])
 
   if (!member) notFound()
 
-  // 依今天日期查詢當前季度（不寫死公曆季度）
-  const today = new Date().toISOString().split('T')[0]
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id, year, quarter')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .single()
-
-  // Season attendance & debt
-  const { data: attendance } = await supabase
-    .from('attendance_records')
-    .select(`
-      *,
-      activity:activities(id, activity_date, venue_name, status)
-    `)
-    .eq('member_id', id)
-    .eq('checked_in', true)
-    .order('checked_in_at', { ascending: false })
-    .limit(20)
-
   const thisSeasonAtt = attendance?.filter(a => a.season_id === season?.id) ?? []
-  const currentSeasonSequence = thisSeasonAtt.length  // 等同於 max(season_sequence)
+  const currentSeasonSequence = thisSeasonAtt.length
   const totalOwed = attendance?.reduce((sum, a) => {
     if (a.payment_status === 'pending' || a.payment_status === 'partial') {
       return sum + (a.fee_amount ?? 0) - a.paid_amount
@@ -58,14 +65,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     return sum
   }, 0) ?? 0
 
-  // 下次出席費率（依目前次數 + 1 查詢）
+  // ── Batch 2：rpc get_fee_amount（需要 Batch 1 結果）────────────────
   let nextFeeAmount: number | null = null
-  const { data: activeFeeRule } = await supabase
-    .from('fee_rules')
-    .select('id')
-    .eq('is_active', true)
-    .single()
-
   if (activeFeeRule) {
     const { data: fee } = await supabase.rpc('get_fee_amount', {
       p_fee_rule_id: activeFeeRule.id,

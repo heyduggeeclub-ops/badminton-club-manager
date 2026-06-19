@@ -16,41 +16,29 @@ export default async function AttendanceDetailPage({
   const { activityId } = await params
   const supabase = await createClient()
 
-  // ── 取得活動 ──
-  const { data: activity } = await supabase
-    .from('activities')
-    .select('*')
-    .eq('id', activityId)
-    .single()
+  // ── Batch 1：活動 + 報名名單（並行，兩者只需 activityId）────────────
+  const [
+    { data: activity },
+    { data: registrations },
+  ] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('*')
+      .eq('id', activityId)
+      .single(),
+    supabase
+      .from('registrations')
+      .select('member_id, status, waitlist_position, registered_at')
+      .eq('activity_id', activityId)
+      .in('status', ['confirmed', 'promoted', 'waitlist'])
+      .order('registered_at', { ascending: true }),
+  ])
 
   if (!activity) notFound()
   if (activity.status === 'cancelled') redirect('/attendance')
 
-  // ── 取得此活動的報名名單（正取 + 遞補 + 候補），以報名名單為出席基準 ──
-  const { data: registrations } = await supabase
-    .from('registrations')
-    .select('member_id, status, waitlist_position, registered_at')
-    .eq('activity_id', activityId)
-    .in('status', ['confirmed', 'promoted', 'waitlist'])
-    .order('registered_at', { ascending: true })
-
-  // 若無報名名單，提早返回空頁面
   const regList = registrations ?? []
-
-  // ── 依報名名單取成員資料（不限 status，包含已停用會員）──
   const memberIds = [...new Set(regList.map(r => r.member_id))]
-
-  type MemberRow = { id: string; name: string; display_name: string | null; gender: string; role: string }
-  let memberMap: Record<string, MemberRow> = {}
-
-  if (memberIds.length > 0) {
-    const { data: memberRows } = await supabase
-      .from('members')
-      .select('id, name, display_name, gender, role')
-      .in('id', memberIds)
-      .in('status', ['active', 'pending'])   // 停用帳號不顯示
-    memberRows?.forEach(m => { memberMap[m.id] = m })
-  }
 
   // ── 報名資訊 map ──
   const regMap: Record<string, { status: string; waitlistPosition: number | null }> = {}
@@ -58,41 +46,55 @@ export default async function AttendanceDetailPage({
     regMap[r.member_id] = { status: r.status, waitlistPosition: r.waitlist_position }
   })
 
-  // ── 取得此活動現有的出席紀錄 ──
-  const { data: attRecords } = await supabase
-    .from('attendance_records')
-    .select('*')
-    .eq('activity_id', activityId)
+  // ── Batch 2：成員資料 + 本季所有出席紀錄（含當場）+ 欠款（並行）────
+  // attendance_records 一次查整季，JS 再分割為「本場」vs「過去」，消除重複查詢
+  type MemberRow = { id: string; name: string; display_name: string | null; gender: string; role: string }
+
+  const [
+    memberRowsResult,
+    { data: seasonAttRecords },
+    debtResult,
+  ] = await Promise.all([
+    memberIds.length > 0
+      ? supabase
+          .from('members')
+          .select('id, name, display_name, gender, role')
+          .in('id', memberIds)
+          .in('status', ['active', 'pending'])
+      : Promise.resolve({ data: [] as MemberRow[] }),
+    supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('season_id', activity.season_id),
+    memberIds.length > 0
+      ? supabase
+          .from('member_debt_summary')
+          .select('member_id, total_owed')
+          .in('member_id', memberIds)
+      : Promise.resolve({ data: [] as { member_id: string; total_owed: number }[] }),
+  ])
+
+  // JS 分割：本場出席紀錄 / 本季其他場次出席紀錄
+  const memberMap: Record<string, MemberRow> = {}
+  memberRowsResult.data?.forEach((m: MemberRow) => { memberMap[m.id] = m })
 
   const attMap: Record<string, AttendanceRecord> = {}
-  attRecords?.forEach(ar => { attMap[ar.member_id] = ar as AttendanceRecord })
-
-  // ── 取得本季（此活動之外）的最高 season_sequence（用於顯示打卡前牌位）──
-  const { data: seasonSeqs } = await supabase
-    .from('attendance_records')
-    .select('member_id, season_sequence')
-    .eq('season_id', activity.season_id)
-    .eq('checked_in', true)
-    .neq('activity_id', activityId)
-
   const priorSeqMap: Record<string, number> = {}
-  seasonSeqs?.forEach(r => {
-    const cur = priorSeqMap[r.member_id] ?? 0
-    if ((r.season_sequence ?? 0) > cur) {
-      priorSeqMap[r.member_id] = r.season_sequence ?? 0
+  seasonAttRecords?.forEach(ar => {
+    if (ar.activity_id === activityId) {
+      attMap[ar.member_id] = ar as AttendanceRecord
+    } else if (ar.checked_in) {
+      const cur = priorSeqMap[ar.member_id] ?? 0
+      if ((ar.season_sequence ?? 0) > cur) {
+        priorSeqMap[ar.member_id] = ar.season_sequence ?? 0
+      }
     }
   })
 
-  // ── 取得欠款資料 ──
-  const { data: debts } = memberIds.length > 0
-    ? await supabase
-        .from('member_debt_summary')
-        .select('member_id, total_owed')
-        .in('member_id', memberIds)
-    : { data: [] }
-
   const debtMap: Record<string, number> = {}
-  debts?.forEach(d => { debtMap[d.member_id] = d.total_owed ?? 0 })
+  debtResult.data?.forEach((d: { member_id: string; total_owed: number }) => {
+    debtMap[d.member_id] = d.total_owed ?? 0
+  })
 
   // ── 組合 AttendanceMember 列表 ──
   const members: AttendanceMember[] = memberIds.flatMap(memberId => {

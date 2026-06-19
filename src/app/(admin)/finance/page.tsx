@@ -10,65 +10,60 @@ async function getFinanceData(selectedSeasonId?: string) {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // 所有季度（倒序）
-  const { data: allSeasons } = await supabase
-    .from('seasons')
-    .select('id, year, quarter')
-    .order('year', { ascending: false })
-    .order('quarter', { ascending: false })
+  // ── Batch 1：所有季度 + 欠款（並行，兩者互不依賴）────────────────────
+  const [
+    { data: allSeasons },
+    { data: debtRows },
+  ] = await Promise.all([
+    supabase
+      .from('seasons')
+      .select('id, year, quarter, start_date, end_date')
+      .order('year', { ascending: false })
+      .order('quarter', { ascending: false }),
+    supabase
+      .from('member_debt_summary')
+      .select('total_owed')
+      .gt('total_owed', 0),
+  ])
 
-  // 當前季度（預設）
-  const { data: currentSeason } = await supabase
-    .from('seasons')
-    .select('id, year, quarter')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .single()
+  // JS 計算：從 allSeasons 找當前季度，消除第二次 seasons 查詢
+  const currentSeason = allSeasons?.find(
+    s => s.start_date <= today && s.end_date >= today
+  ) ?? allSeasons?.[0] ?? null
 
-  const defaultSeasonId = currentSeason?.id ?? allSeasons?.[0]?.id
+  const defaultSeasonId = currentSeason?.id
   const seasonId = selectedSeasonId ?? defaultSeasonId
   const season = allSeasons?.find(s => s.id === seasonId) ?? currentSeason
 
   if (!season || !seasonId) return null
 
-  // 選取季度的財務彙總
-  const { data: seasonFin } = await supabase
-    .from('season_financials')
-    .select('total_income, total_expense, profit')
-    .eq('season_id', seasonId)
-    .single()
-
-  // 欠款（全域，不限季度）
-  const { data: debtRows } = await supabase
-    .from('member_debt_summary')
-    .select('total_owed')
-    .gt('total_owed', 0)
-
-  const debtTotal = debtRows?.reduce((s, r) => s + Number(r.total_owed), 0) ?? 0
+  const debtTotal   = debtRows?.reduce((s, r) => s + Number(r.total_owed), 0) ?? 0
   const debtorCount = debtRows?.length ?? 0
 
-  // 選取季度的支出
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select(`
-      *,
-      activity:activities(activity_date, venue_name)
-    `)
-    .eq('season_id', seasonId)
-    .order('expense_date', { ascending: false })
+  // ── Batch 2：所有 season_financials + 選取季度的支出 + 活動（並行）──
+  const [
+    { data: allSeasonFin },
+    { data: expenses },
+    { data: activities },
+  ] = await Promise.all([
+    // 一次取全部 season_financials，JS 分別過濾當季 / 累計，消除重複查詢
+    supabase
+      .from('season_financials')
+      .select('season_id, total_income, total_expense, profit'),
+    supabase
+      .from('expenses')
+      .select(`*, activity:activities(activity_date, venue_name)`)
+      .eq('season_id', seasonId)
+      .order('expense_date', { ascending: false }),
+    supabase
+      .from('activities')
+      .select('id, activity_date, venue_name')
+      .eq('season_id', seasonId)
+      .order('activity_date', { ascending: false }),
+  ])
 
-  // 選取季度的活動（支出表單用）
-  const { data: activities } = await supabase
-    .from('activities')
-    .select('id, activity_date, venue_name')
-    .eq('season_id', seasonId)
-    .order('activity_date', { ascending: false })
-
-  // 所有季度累計
-  const { data: allSeasonFin } = await supabase
-    .from('season_financials')
-    .select('total_income, total_expense, profit')
-
+  // JS 過濾：當季財務 vs 累計（不再需要第二次 season_financials 查詢）
+  const seasonFin = allSeasonFin?.find(f => f.season_id === seasonId)
   const cumulative = {
     income:  allSeasonFin?.reduce((s, r) => s + Number(r.total_income),  0) ?? 0,
     expense: allSeasonFin?.reduce((s, r) => s + Number(r.total_expense), 0) ?? 0,

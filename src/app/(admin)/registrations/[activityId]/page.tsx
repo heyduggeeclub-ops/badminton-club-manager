@@ -10,28 +10,40 @@ interface Props {
 async function getPageData(activityId: string) {
   const supabase = await createClient()
 
-  const { data: activity } = await supabase
-    .from('activities')
-    .select('id, season_id, activity_date, start_time, end_time, venue_name, court_count, max_per_court, status, notes, fee_rule_id, created_by, created_at, updated_at')
-    .eq('id', activityId)
-    .single()
+  const today = new Date().toISOString().split('T')[0]
+
+  // ── Batch 1：activity、members、registrations、season 全部並行 ──────
+  const [
+    { data: activity },
+    { data: members },
+    { data: registrations },
+    { data: season },
+  ] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('id, season_id, activity_date, start_time, end_time, venue_name, court_count, max_per_court, status, notes, fee_rule_id, created_by, created_at, updated_at')
+      .eq('id', activityId)
+      .single(),
+    supabase
+      .from('members')
+      .select('id, name, display_name, gender, role')
+      .in('status', ['active', 'pending'])
+      .order('name'),
+    supabase
+      .from('registrations')
+      .select('member_id, status, waitlist_position, registered_at')
+      .eq('activity_id', activityId)
+      .in('status', ['confirmed', 'promoted', 'waitlist'])
+      .order('registered_at', { ascending: true }),
+    supabase
+      .from('seasons')
+      .select('id')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single(),
+  ])
 
   if (!activity) return null
-
-  // 所有在籍/待確認會員
-  const { data: members } = await supabase
-    .from('members')
-    .select('id, name, display_name, gender, role')
-    .in('status', ['active', 'pending'])
-    .order('name')
-
-  // 該活動所有有效報名（含候補）
-  const { data: registrations } = await supabase
-    .from('registrations')
-    .select('member_id, status, waitlist_position, registered_at')
-    .eq('activity_id', activityId)
-    .in('status', ['confirmed', 'promoted', 'waitlist'])
-    .order('registered_at', { ascending: true })
 
   // 建立 memberId → registration 的對應表
   type RegInfo = { status: string; waitlistPosition: number | null }
@@ -43,15 +55,7 @@ async function getPageData(activityId: string) {
     })
   })
 
-  // 本季出席次數（牌位用）
-  const today = new Date().toISOString().split('T')[0]
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .single()
-
+  // ── Batch 2：本季出席紀錄（需要 season.id）────────────────────────
   let seasonSeqMap: Record<string, number> = {}
   if (season && members && members.length > 0) {
     const { data: attRecords } = await supabase

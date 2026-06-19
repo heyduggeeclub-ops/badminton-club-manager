@@ -20,22 +20,33 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: activity } = await supabase
-    .from('activities')
-    .select('*, season:seasons(year, quarter), fee_rule:fee_rules(name)')
-    .eq('id', id)
-    .single()
+  // ── Batch 1：activity、registrations、financials 全部並行（只需 id）──
+  const [
+    { data: activity },
+    { data: regs },
+    { data: financials },
+  ] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('*, season:seasons(year, quarter), fee_rule:fee_rules(name)')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('registrations')
+      .select('id, member_id, status, waitlist_position, registered_at')
+      .eq('activity_id', id)
+      .in('status', ['confirmed', 'promoted', 'waitlist'])
+      .order('registered_at', { ascending: true }),
+    supabase
+      .from('activity_financials')
+      .select('*')
+      .eq('activity_id', id)
+      .single(),
+  ])
 
   if (!activity) notFound()
 
-  // ── 報名資料（分兩步：先取 registrations，再取 member 名稱）
-  const { data: regs } = await supabase
-    .from('registrations')
-    .select('id, member_id, status, waitlist_position, registered_at')
-    .eq('activity_id', id)
-    .in('status', ['confirmed', 'promoted', 'waitlist'])
-    .order('registered_at', { ascending: true })
-
+  // ── Batch 2：members（需要 regs 的 memberIds）─────────────────────
   const memberIds = [...new Set((regs ?? []).map(r => r.member_id))]
 
   let memberMap: Record<string, { name: string; gender: string }> = {}
@@ -44,7 +55,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       .from('members')
       .select('id, name, gender')
       .in('id', memberIds)
-      .in('status', ['active', 'pending'])   // 停用帳號不顯示
+      .in('status', ['active', 'pending'])
     memberRows?.forEach(m => { memberMap[m.id] = { name: m.name, gender: m.gender } })
   }
 
@@ -55,13 +66,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const confirmed = registrations.filter(r => r.status === 'confirmed' || r.status === 'promoted')
   const waitlist  = registrations.filter(r => r.status === 'waitlist')
-
-  // Activity financials
-  const { data: financials } = await supabase
-    .from('activity_financials')
-    .select('*')
-    .eq('activity_id', id)
-    .single()
 
   const maxCapacity = activity.court_count * activity.max_per_court
 
