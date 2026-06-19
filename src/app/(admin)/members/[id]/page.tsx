@@ -13,7 +13,7 @@ import {
   type Member, type AttendanceRecord, type MemberStatus, type MemberRole,
 } from '@/types'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Hash } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { updateMember, deactivateMember, reactivateMember } from '@/lib/actions/members'
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -86,8 +86,6 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       gender: formData.get('gender') as 'male' | 'female',
       role: formData.get('role') as any,
       status: formData.get('status') as any,
-      phone: (formData.get('phone') as string) || undefined,
-      line_id: (formData.get('line_id') as string) || undefined,
       notes: (formData.get('notes') as string) || undefined,
     })
   }
@@ -218,8 +216,6 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 <option value="pending">待確認</option>
                 <option value="inactive">停用</option>
               </Select>
-              <Input label="電話" name="phone" defaultValue={member.phone ?? ''} />
-              <Input label="LINE ID" name="line_id" defaultValue={member.line_id ?? ''} />
               <Textarea label="備註" name="notes" defaultValue={member.notes ?? ''} />
               <Button type="submit" className="w-full">儲存變更</Button>
             </CardBody>

@@ -15,8 +15,6 @@ export default async function NewMemberPage() {
       gender: formData.get('gender') as 'male' | 'female',
       role: formData.get('role') as any,
       status: formData.get('status') as any,
-      phone: (formData.get('phone') as string) || undefined,
-      line_id: (formData.get('line_id') as string) || undefined,
       notes: (formData.get('notes') as string) || undefined,
     })
   }
@@ -58,17 +56,6 @@ export default async function NewMemberPage() {
                 <option value="leader">團長</option>
               </Select>
             </div>
-            <Input
-              label="手機號碼"
-              name="phone"
-              type="tel"
-              placeholder="09xx-xxx-xxx"
-            />
-            <Input
-              label="LINE ID"
-              name="line_id"
-              placeholder="@example"
-            />
             <Textarea
               label="備註"
               name="notes"
