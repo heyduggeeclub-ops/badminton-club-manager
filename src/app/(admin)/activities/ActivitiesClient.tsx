@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ActivityStatusBadge } from '@/components/activities/ActivityStatusBadge'
 import { formatDate, formatTime } from '@/lib/utils'
 import type { ActivityStatus } from '@/types'
@@ -9,7 +9,7 @@ import { Search, X, MapPin, Clock, Users } from 'lucide-react'
 
 interface ActivityRow {
   id: string
-  activity_date: string
+  activity_date: string | null
   start_time: string
   end_time: string
   venue_name: string
@@ -28,13 +28,16 @@ export function ActivitiesClient({ activities }: Props) {
   const [search, setSearch] = useState('')
 
   const q = search.trim().toLowerCase()
-  const filtered = q
-    ? activities.filter(a =>
-        a.venue_name.toLowerCase().includes(q) ||
-        a.activity_date.includes(q) ||
-        formatDate(a.activity_date).includes(q)
-      )
-    : activities
+  const filtered = useMemo(() =>
+    q
+      ? activities.filter(a =>
+          a.venue_name.toLowerCase().includes(q) ||
+          (a.activity_date ?? '').includes(q) ||
+          formatDate(a.activity_date).includes(q)
+        )
+      : activities,
+    [activities, q]
+  )
 
   return (
     <div>

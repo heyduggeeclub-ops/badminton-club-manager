@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { TierBadge } from '@/components/ui/TierBadge'
 import { formatCurrency } from '@/lib/utils'
@@ -43,21 +43,24 @@ export function MemberListClient({ members }: Props) {
 
   const q = search.trim().toLowerCase()
 
-  const filtered = members
-    .filter(m => statusTab === 'all' || m.status === statusTab)
-    .filter(m =>
-      !q ||
-      m.name.toLowerCase().includes(q) ||
-      (m.display_name?.toLowerCase().includes(q) ?? false) ||
-      GENDER_LABELS[m.gender].includes(q) ||
-      ROLE_LABELS[m.role].toLowerCase().includes(q)
-    )
+  const filtered = useMemo(() =>
+    members
+      .filter(m => statusTab === 'all' || m.status === statusTab)
+      .filter(m =>
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        (m.display_name?.toLowerCase().includes(q) ?? false) ||
+        GENDER_LABELS[m.gender].includes(q) ||
+        ROLE_LABELS[m.role].toLowerCase().includes(q)
+      ),
+    [members, statusTab, q]
+  )
 
-  const counts: Record<StatusTab, number> = {
+  const counts: Record<StatusTab, number> = useMemo(() => ({
     all:      members.length,
     active:   members.filter(m => m.status === 'active').length,
     inactive: members.filter(m => m.status === 'inactive').length,
-  }
+  }), [members])
 
   return (
     <div>

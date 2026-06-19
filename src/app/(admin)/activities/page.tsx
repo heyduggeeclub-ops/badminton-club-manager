@@ -2,54 +2,23 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { formatDate, formatTime, getCurrentSeason } from '@/lib/utils'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import type { Activity, Season } from '@/types'
 import { ActivitiesClient } from './ActivitiesClient'
 
 async function getActivities() {
   const supabase = await createClient()
-  const { year, quarter } = getCurrentSeason()
 
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id')
-    .eq('year', year)
-    .eq('quarter', quarter)
-    .single()
-
+  // activity_financials view 已內含 court_count, max_per_court,
+  // registration_count, waitlist_count — 單一查詢取得完整資料（3 queries → 1）
   const { data: activities } = await supabase
-    .from('activities')
-    .select(`
-      *,
-      season:seasons(year, quarter)
-    `)
+    .from('activity_financials')
+    .select('activity_id, activity_date, start_time, end_time, venue_name, court_count, max_per_court, status, registration_count, waitlist_count')
     .order('activity_date', { ascending: false })
     .limit(50)
 
-  // Registration counts
-  const activityIds = activities?.map(a => a.id) ?? []
-  let registrationCounts: Record<string, { confirmed: number; waitlist: number }> = {}
-
-  if (activityIds.length > 0) {
-    const { data: regs } = await supabase
-      .from('registrations')
-      .select('activity_id, status')
-      .in('activity_id', activityIds)
-      .in('status', ['confirmed', 'promoted', 'waitlist'])
-
-    regs?.forEach(r => {
-      if (!registrationCounts[r.activity_id]) {
-        registrationCounts[r.activity_id] = { confirmed: 0, waitlist: 0 }
-      }
-      if (r.status === 'confirmed' || r.status === 'promoted') registrationCounts[r.activity_id].confirmed++
-      if (r.status === 'waitlist') registrationCounts[r.activity_id].waitlist++
-    })
-  }
-
   const rows = (activities ?? []).map(a => ({
-    id: a.id,
+    id: a.activity_id,
     activity_date: a.activity_date,
     start_time: a.start_time,
     end_time: a.end_time,
@@ -57,11 +26,11 @@ async function getActivities() {
     court_count: a.court_count,
     max_per_court: a.max_per_court,
     status: a.status,
-    confirmedCount: registrationCounts[a.id]?.confirmed ?? 0,
-    waitlistCount:  registrationCounts[a.id]?.waitlist  ?? 0,
+    confirmedCount: a.registration_count,
+    waitlistCount:  a.waitlist_count,
   }))
 
-  return { rows, currentSeasonId: season?.id }
+  return { rows }
 }
 
 export default async function ActivitiesPage() {

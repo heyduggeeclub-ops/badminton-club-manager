@@ -80,37 +80,8 @@ async function getDashboardData() {
   const confirmedCount = (nextRegs ?? []).filter(r => r.status === 'confirmed' || r.status === 'promoted').length
   const waitlistCount  = (nextRegs ?? []).filter(r => r.status === 'waitlist').length
 
-  // ── Batch 3：補查 start_time / end_time / registration_count（並行）──
-  const recentIds = (recentActivities ?? []).map(a => a.activity_id)
-  let timeMap: Record<string, { start_time: string; end_time: string }> = {}
-  let regCountMap: Record<string, number> = {}
-
-  if (recentIds.length > 0) {
-    const [{ data: actDetails }, { data: recentRegs }] = await Promise.all([
-      supabase
-        .from('activities')
-        .select('id, start_time, end_time')
-        .in('id', recentIds),
-      supabase
-        .from('registrations')
-        .select('activity_id')
-        .in('activity_id', recentIds)
-        .eq('status', 'confirmed'),
-    ])
-    ;(actDetails ?? []).forEach(d => {
-      timeMap[d.id] = { start_time: d.start_time, end_time: d.end_time }
-    })
-    ;(recentRegs ?? []).forEach(r => {
-      regCountMap[r.activity_id] = (regCountMap[r.activity_id] ?? 0) + 1
-    })
-  }
-
-  const enrichedActivities = (recentActivities ?? []).map(a => ({
-    ...(a as ActivityFinancials),
-    start_time: timeMap[a.activity_id]?.start_time ?? '',
-    end_time:   timeMap[a.activity_id]?.end_time ?? '',
-    registration_count: regCountMap[a.activity_id] ?? 0,
-  }))
+  // start_time / end_time / registration_count / waitlist_count 已內建於 view
+  const enrichedActivities = (recentActivities ?? []) as ActivityFinancials[]
 
   return {
     year, quarter,

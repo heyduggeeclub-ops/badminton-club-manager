@@ -183,14 +183,20 @@ export interface MemberDebtSummary {
 
 export interface ActivityFinancials {
   activity_id: string
-  activity_date: string
+  activity_date: string | null
+  start_time: string
+  end_time: string
   venue_name: string
+  court_count: number
+  max_per_court: number
   season_id: string
   status: ActivityStatus
   attended_count: number
   total_income: number
   total_expense: number
   profit: number
+  registration_count: number
+  waitlist_count: number
 }
 
 export interface SeasonFinancials {
