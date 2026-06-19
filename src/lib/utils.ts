@@ -1,11 +1,13 @@
 import { format, parseISO } from 'date-fns'
 import { zhTW } from 'date-fns/locale'
 
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '（未設定日期）'
   return format(parseISO(dateStr), 'yyyy/MM/dd', { locale: zhTW })
 }
 
-export function formatDateWithDay(dateStr: string): string {
+export function formatDateWithDay(dateStr: string | null | undefined): string {
+  if (!dateStr) return '（未設定日期）'
   return format(parseISO(dateStr), 'yyyy/MM/dd (EEE)', { locale: zhTW })
 }
 

@@ -166,23 +166,13 @@ export async function duplicateActivity(id: string) {
 
   if (!original) throw new Error('找不到原始活動')
 
-  const newDate = new Date(original.activity_date)
-  newDate.setDate(newDate.getDate() + 7)
-  const newDateStr = newDate.toISOString().split('T')[0]
-
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id')
-    .lte('start_date', newDateStr)
-    .gte('end_date', newDateStr)
-    .single()
-
+  // 複製活動設定，日期留空讓使用者在編輯頁填寫
   const { data, error } = await supabase
     .from('activities')
     .insert({
-      season_id: season?.id ?? original.season_id,
+      season_id: original.season_id,
       fee_rule_id: original.fee_rule_id,
-      activity_date: newDateStr,
+      activity_date: null,
       start_time: original.start_time,
       end_time: original.end_time,
       venue_name: original.venue_name,
@@ -202,7 +192,7 @@ export async function duplicateActivity(id: string) {
     action: 'duplicate_activity',
     entity_type: 'activity',
     entity_id: data.id,
-    new_data: { source_id: id, new_date: newDateStr },
+    new_data: { source_id: id },
   })
 
   revalidatePath('/activities')

@@ -127,50 +127,53 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       </div>
 
       {/* Quick Actions */}
-      {isEditable && (
-        <Card>
-          <CardBody className="flex flex-wrap gap-3">
-            <Link href={`/registrations/${id}`}>
-              <Button variant="secondary" size="sm">
-                <ClipboardList size={15} className="mr-1.5" />
-                前往報名管理
-              </Button>
-            </Link>
-            <Link href={`/attendance?activity=${id}`}>
-              <Button variant="secondary" size="sm">
-                <CheckSquare size={15} className="mr-1.5" />
-                前往出席收費
-              </Button>
-            </Link>
+      <Card>
+        <CardBody className="flex flex-wrap gap-3">
+          {isEditable && (
+            <>
+              <Link href={`/registrations/${id}`}>
+                <Button variant="secondary" size="sm">
+                  <ClipboardList size={15} className="mr-1.5" />
+                  前往報名管理
+                </Button>
+              </Link>
+              <Link href={`/attendance?activity=${id}`}>
+                <Button variant="secondary" size="sm">
+                  <CheckSquare size={15} className="mr-1.5" />
+                  前往出席收費
+                </Button>
+              </Link>
 
-            {/* Status change */}
-            <form action={handleStatusChange} className="flex items-center gap-2">
-              <select
-                name="status"
-                defaultValue={activity.status}
-                className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="draft">草稿</option>
-                <option value="open">開放報名</option>
-                <option value="closed">截止報名</option>
-                <option value="completed">完成</option>
-              </select>
-              <Button type="submit" variant="secondary" size="sm">更新狀態</Button>
-            </form>
+              {/* Status change */}
+              <form action={handleStatusChange} className="flex items-center gap-2">
+                <select
+                  name="status"
+                  defaultValue={activity.status}
+                  className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="draft">草稿</option>
+                  <option value="open">開放報名</option>
+                  <option value="closed">截止報名</option>
+                  <option value="completed">完成</option>
+                </select>
+                <Button type="submit" variant="secondary" size="sm">更新狀態</Button>
+              </form>
 
-            <form action={handleDuplicate}>
-              <Button type="submit" variant="secondary" size="sm">
-                <Copy size={14} className="mr-1.5" />
-                複製活動（+7天）
-              </Button>
-            </form>
+              <form action={handleCancel}>
+                <Button type="submit" variant="danger" size="sm">取消活動</Button>
+              </form>
+            </>
+          )}
 
-            <form action={handleCancel}>
-              <Button type="submit" variant="danger" size="sm">取消活動</Button>
-            </form>
-          </CardBody>
-        </Card>
-      )}
+          {/* 複製按鈕：所有狀態皆可使用 */}
+          <form action={handleDuplicate}>
+            <Button type="submit" variant="secondary" size="sm">
+              <Copy size={14} className="mr-1.5" />
+              複製活動
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
 
       {/* Registration List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
