@@ -12,10 +12,10 @@ export async function Topbar() {
   if (user) {
     const { data: member } = await supabase
       .from('members')
-      .select('name')
+      .select('name, display_name')
       .eq('user_id', user.id)
       .single()
-    if (member) memberName = member.name
+    if (member) memberName = member.display_name ?? member.name
   }
 
   return (
