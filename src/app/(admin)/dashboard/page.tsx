@@ -77,6 +77,37 @@ async function getDashboardData() {
     .order('activity_date', { ascending: false })
     .limit(5)
 
+  // 補查 start_time / end_time / registration_count
+  const recentIds = (recentActivities ?? []).map(a => a.activity_id)
+  let timeMap: Record<string, { start_time: string; end_time: string }> = {}
+  let regCountMap: Record<string, number> = {}
+
+  if (recentIds.length > 0) {
+    const { data: actDetails } = await supabase
+      .from('activities')
+      .select('id, start_time, end_time')
+      .in('id', recentIds)
+    ;(actDetails ?? []).forEach(d => {
+      timeMap[d.id] = { start_time: d.start_time, end_time: d.end_time }
+    })
+
+    const { data: regs } = await supabase
+      .from('registrations')
+      .select('activity_id')
+      .in('activity_id', recentIds)
+      .eq('status', 'confirmed')
+    ;(regs ?? []).forEach(r => {
+      regCountMap[r.activity_id] = (regCountMap[r.activity_id] ?? 0) + 1
+    })
+  }
+
+  const enrichedActivities = (recentActivities ?? []).map(a => ({
+    ...(a as ActivityFinancials),
+    start_time: timeMap[a.activity_id]?.start_time ?? '',
+    end_time:   timeMap[a.activity_id]?.end_time ?? '',
+    registration_count: regCountMap[a.activity_id] ?? 0,
+  }))
+
   return {
     year, quarter,
     totalIncome: seasonFin?.total_income ?? 0,
@@ -86,7 +117,7 @@ async function getDashboardData() {
     confirmedCount,
     waitlistCount,
     debtList: (debtList ?? []) as MemberDebtSummary[],
-    recentActivities: (recentActivities ?? []) as ActivityFinancials[],
+    recentActivities: enrichedActivities,
   }
 }
 
@@ -282,42 +313,94 @@ export default async function DashboardPage() {
             </Link>
           </div>
         </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-y border-gray-100">
-              <tr>
-                {['日期','場館','出席','收入','支出','損益','狀態'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {recentActivities.length > 0 ? recentActivities.map(a => (
-                <tr key={a.activity_id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-800">{formatDate(a.activity_date)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{a.venue_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{a.attended_count} 人</td>
-                  <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(a.total_income)}</td>
-                  <td className="px-4 py-3 text-sm text-red-500">{formatCurrency(a.total_expense)}</td>
-                  <td className={`px-4 py-3 text-sm font-medium ${a.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {a.profit >= 0 ? '+' : ''}{formatCurrency(a.profit)}
-                  </td>
-                  <td className="px-4 py-3">
+
+        {recentActivities.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-gray-400">本季尚無完成的活動紀錄</div>
+        ) : (
+          <>
+            {/* Mobile: Card Layout */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {recentActivities.map(a => (
+                <div key={a.activity_id} className="px-4 py-3 space-y-2">
+                  {/* Row 1: 場館 + 狀態 */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900">{a.venue_name}</span>
                     <Badge variant={activityStatusVariant[a.status] ?? 'gray'}>
                       {ACTIVITY_STATUS_LABELS[a.status]}
                     </Badge>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
-                    本季尚無完成的活動紀錄
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                  {/* Row 2: 日期 + 時間 */}
+                  <p className="text-xs text-gray-500">
+                    {formatDate(a.activity_date)}
+                    {a.start_time && a.end_time && (
+                      <span className="ml-2">{a.start_time.slice(0,5)}–{a.end_time.slice(0,5)}</span>
+                    )}
+                  </p>
+                  {/* Row 3: 報名 / 出席 / 收入 */}
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span>報名 {a.registration_count} 人</span>
+                    <span>出席 {a.attended_count} 人</span>
+                    {a.total_income > 0 && (
+                      <span className="text-green-600 font-medium">收入 {formatCurrency(a.total_income)}</span>
+                    )}
+                  </div>
+                  {/* Row 4: 查看詳情 */}
+                  <Link
+                    href={`/activities/${a.activity_id}`}
+                    className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium hover:underline"
+                  >
+                    查看詳情 <ChevronRight size={12} />
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-y border-gray-100">
+                  <tr>
+                    {['日期','場館','時間','報名','出席','收入','損益','狀態',''].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {recentActivities.map(a => (
+                    <tr key={a.activity_id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-800">{formatDate(a.activity_date)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{a.venue_name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {a.start_time && a.end_time
+                          ? `${a.start_time.slice(0,5)}–${a.end_time.slice(0,5)}`
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{a.registration_count} 人</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{a.attended_count} 人</td>
+                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(a.total_income)}</td>
+                      <td className={`px-4 py-3 text-sm font-medium ${a.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {a.profit >= 0 ? '+' : ''}{formatCurrency(a.profit)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={activityStatusVariant[a.status] ?? 'gray'}>
+                          {ACTIVITY_STATUS_LABELS[a.status]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/activities/${a.activity_id}`}
+                          className="text-xs text-indigo-600 hover:underline whitespace-nowrap"
+                        >
+                          查看詳情
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   )
