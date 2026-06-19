@@ -16,87 +16,91 @@ import type { ActivityFinancials, MemberDebtSummary } from '@/types'
 
 async function getDashboardData() {
   const supabase = await createClient()
-
   const today = new Date().toISOString().split('T')[0]
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id, year, quarter')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .single()
+
+  // ── Batch 1：season、下一場活動、欠款清單 全部並行 ──────────────────
+  const [
+    { data: season },
+    { data: nextActivity },
+    { data: debtList },
+  ] = await Promise.all([
+    supabase
+      .from('seasons')
+      .select('id, year, quarter')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single(),
+    supabase
+      .from('activities')
+      .select('id, activity_date, start_time, end_time, venue_name, court_count, max_per_court, status')
+      .in('status', ['open', 'draft'])
+      .gte('activity_date', today)
+      .order('activity_date', { ascending: true })
+      .limit(1)
+      .single(),
+    supabase
+      .from('member_debt_summary')
+      .select('*')
+      .gt('total_owed', 0)
+      .order('total_owed', { ascending: false })
+      .limit(5),
+  ])
 
   if (!season) return null
   const { year, quarter } = season
 
-  // 季度財務
-  const { data: seasonFin } = await supabase
-    .from('season_financials')
-    .select('total_income, total_expense, profit')
-    .eq('season_id', season.id)
-    .single()
+  // ── Batch 2：季度財務、最近活動、報名人數（confirmed+waitlist 合一）並行 ──
+  const [
+    { data: seasonFin },
+    { data: recentActivities },
+    { data: nextRegs },
+  ] = await Promise.all([
+    supabase
+      .from('season_financials')
+      .select('total_income, total_expense, profit')
+      .eq('season_id', season.id)
+      .single(),
+    supabase
+      .from('activity_financials')
+      .select('*')
+      .eq('season_id', season.id)
+      .in('status', ['completed', 'cancelled'])
+      .order('activity_date', { ascending: false })
+      .limit(5),
+    // confirmed + waitlist 合併為單一查詢，JS 計數
+    nextActivity
+      ? supabase
+          .from('registrations')
+          .select('status')
+          .eq('activity_id', nextActivity.id)
+          .in('status', ['confirmed', 'promoted', 'waitlist'])
+      : Promise.resolve({ data: [] as { status: string }[] }),
+  ])
 
-  // 下一場活動
-  const { data: nextActivity } = await supabase
-    .from('activities')
-    .select('id, activity_date, start_time, end_time, venue_name, court_count, max_per_court, status')
-    .in('status', ['open', 'draft'])
-    .gte('activity_date', today)
-    .order('activity_date', { ascending: true })
-    .limit(1)
-    .single()
+  const confirmedCount = (nextRegs ?? []).filter(r => r.status === 'confirmed' || r.status === 'promoted').length
+  const waitlistCount  = (nextRegs ?? []).filter(r => r.status === 'waitlist').length
 
-  let confirmedCount = 0
-  let waitlistCount = 0
-  if (nextActivity) {
-    const { count: confirmed } = await supabase
-      .from('registrations')
-      .select('*', { count: 'exact', head: true })
-      .eq('activity_id', nextActivity.id)
-      .eq('status', 'confirmed')
-    const { count: waitlist } = await supabase
-      .from('registrations')
-      .select('*', { count: 'exact', head: true })
-      .eq('activity_id', nextActivity.id)
-      .eq('status', 'waitlist')
-    confirmedCount = confirmed ?? 0
-    waitlistCount = waitlist ?? 0
-  }
-
-  const { data: debtList } = await supabase
-    .from('member_debt_summary')
-    .select('*')
-    .gt('total_owed', 0)
-    .order('total_owed', { ascending: false })
-    .limit(5)
-
-  const { data: recentActivities } = await supabase
-    .from('activity_financials')
-    .select('*')
-    .eq('season_id', season.id)
-    .in('status', ['completed', 'cancelled'])
-    .order('activity_date', { ascending: false })
-    .limit(5)
-
-  // 補查 start_time / end_time / registration_count
+  // ── Batch 3：補查 start_time / end_time / registration_count（並行）──
   const recentIds = (recentActivities ?? []).map(a => a.activity_id)
   let timeMap: Record<string, { start_time: string; end_time: string }> = {}
   let regCountMap: Record<string, number> = {}
 
   if (recentIds.length > 0) {
-    const { data: actDetails } = await supabase
-      .from('activities')
-      .select('id, start_time, end_time')
-      .in('id', recentIds)
+    const [{ data: actDetails }, { data: recentRegs }] = await Promise.all([
+      supabase
+        .from('activities')
+        .select('id, start_time, end_time')
+        .in('id', recentIds),
+      supabase
+        .from('registrations')
+        .select('activity_id')
+        .in('activity_id', recentIds)
+        .eq('status', 'confirmed'),
+    ])
     ;(actDetails ?? []).forEach(d => {
       timeMap[d.id] = { start_time: d.start_time, end_time: d.end_time }
     })
-
-    const { data: regs } = await supabase
-      .from('registrations')
-      .select('activity_id')
-      .in('activity_id', recentIds)
-      .eq('status', 'confirmed')
-    ;(regs ?? []).forEach(r => {
+    ;(recentRegs ?? []).forEach(r => {
       regCountMap[r.activity_id] = (regCountMap[r.activity_id] ?? 0) + 1
     })
   }

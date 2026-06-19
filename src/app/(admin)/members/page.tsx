@@ -9,23 +9,33 @@ import { Plus } from 'lucide-react'
 
 async function getMembers() {
   const supabase = await createClient()
-
   const today = new Date().toISOString().split('T')[0]
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('id')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .single()
 
-  const { data: members } = await supabase
-    .from('members')
-    .select('*')
-    .order('role', { ascending: false })
-    .order('name')
+  // ── Batch 1：season、會員清單、欠款 全部並行 ──────────────────────────
+  const [
+    { data: season },
+    { data: members },
+    { data: debts },
+  ] = await Promise.all([
+    supabase
+      .from('seasons')
+      .select('id')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single(),
+    supabase
+      .from('members')
+      .select('*')
+      .order('role', { ascending: false })
+      .order('name'),
+    supabase
+      .from('member_debt_summary')
+      .select('member_id, total_owed'),
+  ])
 
+  // ── Batch 2：出席紀錄（需要 season.id，故接在 Batch 1 後）────────────
   let attendanceCounts: Record<string, number> = {}
-  if (season && members) {
+  if (season) {
     const { data: att } = await supabase
       .from('attendance_records')
       .select('member_id')
@@ -36,9 +46,6 @@ async function getMembers() {
     })
   }
 
-  const { data: debts } = await supabase
-    .from('member_debt_summary')
-    .select('member_id, total_owed')
   const debtMap: Record<string, number> = {}
   debts?.forEach(d => { debtMap[d.member_id] = d.total_owed })
 
