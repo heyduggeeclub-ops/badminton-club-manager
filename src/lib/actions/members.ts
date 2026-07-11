@@ -113,6 +113,50 @@ export async function deactivateMember(id: string, reason?: string) {
   revalidatePath(`/members/${id}`)
 }
 
+// ── 設定「本季系統外已出席次數」校正 ─────────────────────────
+// 用於球隊在季度中途才開始使用系統時，補正真實出席次數，
+// 讓 get_season_sequence() 從正確的次序繼續算（影響牌位與收費）。
+export async function setMemberSeasonAdjustment(
+  memberId: string,
+  seasonId: string,
+  priorAttendanceCount: number,
+  note?: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('未登入')
+
+  const { data: actor } = await supabase
+    .from('members')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  const { error } = await supabase
+    .from('member_season_adjustments')
+    .upsert({
+      member_id: memberId,
+      season_id: seasonId,
+      prior_attendance_count: priorAttendanceCount,
+      note: note ?? null,
+      created_by: actor?.id ?? null,
+    }, { onConflict: 'member_id,season_id' })
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('audit_logs').insert({
+    actor_id: actor?.id ?? null,
+    action: 'set_member_season_adjustment',
+    entity_type: 'member_season_adjustment',
+    entity_id: memberId,
+    new_data: { season_id: seasonId, prior_attendance_count: priorAttendanceCount, note },
+  })
+
+  revalidatePath(`/members/${memberId}`)
+  revalidatePath('/members')
+  revalidatePath('/registrations')
+}
+
 export async function reactivateMember(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

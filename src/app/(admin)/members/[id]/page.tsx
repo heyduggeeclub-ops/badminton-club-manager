@@ -14,7 +14,7 @@ import {
 } from '@/types'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { updateMember, deactivateMember, reactivateMember } from '@/lib/actions/members'
+import { updateMember, deactivateMember, reactivateMember, setMemberSeasonAdjustment } from '@/lib/actions/members'
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -65,19 +65,58 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     return sum
   }, 0) ?? 0
 
-  // ── Batch 2：rpc get_fee_amount（需要 Batch 1 結果）────────────────
+  // ── Batch 2：rpc get_fee_amount + 本季系統外已出席次數校正（需要 Batch 1 結果）
   let nextFeeAmount: number | null = null
-  if (activeFeeRule) {
+  let priorAdjustment: number | null = null
+  const [feeResult, adjResult] = await Promise.all([
+    activeFeeRule
+      ? supabase.rpc('get_fee_amount', {
+          p_fee_rule_id: activeFeeRule.id,
+          p_gender: member.gender,
+          // 這裡先用系統內次數 +1 估算，待下面併入校正值後才是最終值
+          p_season_sequence: currentSeasonSequence + 1,
+          p_role: member.role,
+        })
+      : Promise.resolve({ data: null }),
+    season
+      ? supabase
+          .from('member_season_adjustments')
+          .select('prior_attendance_count, note')
+          .eq('member_id', id)
+          .eq('season_id', season.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  const adjustment = adjResult.data as { prior_attendance_count: number; note: string | null } | null
+  priorAdjustment = adjustment?.prior_attendance_count ?? 0
+
+  // 併入校正值：本季實際次序 = 系統內出席次數 + 校正值
+  const adjustedSeasonSequence = currentSeasonSequence + priorAdjustment
+
+  if (activeFeeRule && priorAdjustment > 0) {
+    // 有校正值時，用併入後的次序重新查一次正確費用
     const { data: fee } = await supabase.rpc('get_fee_amount', {
       p_fee_rule_id: activeFeeRule.id,
       p_gender: member.gender,
-      p_season_sequence: currentSeasonSequence + 1,
+      p_season_sequence: adjustedSeasonSequence + 1,
       p_role: member.role,
     })
     nextFeeAmount = fee ?? null
+  } else {
+    nextFeeAmount = feeResult.data ?? null
   }
 
-  const currentTier = getMemberTier(currentSeasonSequence, member.role)
+  const currentTier = getMemberTier(adjustedSeasonSequence, member.role)
+
+  // Server action：設定本季系統外已出席次數校正
+  async function handleSetAdjustment(formData: FormData) {
+    'use server'
+    if (!season) return
+    const count = Number(formData.get('prior_attendance_count') ?? 0)
+    const note = (formData.get('note') as string) || undefined
+    await setMemberSeasonAdjustment(id, season.id, count, note)
+  }
 
   // Server action for edit
   async function handleUpdate(formData: FormData) {
@@ -136,7 +175,14 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-          <p className="text-2xl font-bold text-indigo-600">{thisSeasonAtt.length}</p>
+          <p className="text-2xl font-bold text-indigo-600">
+            {adjustedSeasonSequence}
+            {priorAdjustment > 0 && (
+              <span className="text-xs font-normal text-gray-400 ml-1">
+                （系統內 {thisSeasonAtt.length} ＋校正 {priorAdjustment}）
+              </span>
+            )}
+          </p>
           <p className="text-xs text-gray-500 mt-1">本季出席次數</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
@@ -167,7 +213,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {season ? `${season.year} Q${season.quarter}・` : ''}
-                  本季第 {currentSeasonSequence} 次出席
+                  本季第 {adjustedSeasonSequence} 次出席
                 </p>
               </div>
             </>
@@ -191,6 +237,36 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </p>
         </div>
       </div>
+
+      {/* 本季系統外已出席次數校正 */}
+      {season && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-gray-800">本季系統外已出席次數校正</h2>
+          </CardHeader>
+          <CardBody>
+            <p className="text-xs text-gray-500 mb-3">
+              若球隊在本季中途才開始使用系統，可在此填入此會員在系統外（例如季度已進行到一半才導入系統）已經出席的次數，
+              系統會把這個數字加進「本季出席次序」，讓牌位與收費從正確的次序繼續算，不會被誤判為本季第 1 次。
+            </p>
+            <form action={handleSetAdjustment} className="flex flex-wrap items-end gap-3">
+              <div className="w-28">
+                <Input
+                  label="系統外已出席次數"
+                  name="prior_attendance_count"
+                  type="number"
+                  min={0}
+                  defaultValue={priorAdjustment}
+                />
+              </div>
+              <div className="flex-1 min-w-[10rem]">
+                <Input label="備註（選填）" name="note" placeholder="例：季度中途導入系統" />
+              </div>
+              <Button type="submit">儲存</Button>
+            </form>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Edit Form */}

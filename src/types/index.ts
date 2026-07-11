@@ -53,6 +53,17 @@ export interface FeeRule {
   guest_fee_female: number
 }
 
+export interface MemberSeasonAdjustment {
+  id: string
+  member_id: string
+  season_id: string
+  prior_attendance_count: number
+  note: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface FeeRuleTier {
   id: string
   fee_rule_id: string

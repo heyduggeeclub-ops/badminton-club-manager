@@ -55,17 +55,28 @@ async function getPageData(activityId: string) {
     })
   })
 
-  // ── Batch 2：本季出席紀錄（需要 season.id）────────────────────────
+  // ── Batch 2：本季出席紀錄 + 本季系統外已出席次數校正（需要 season.id）──
   let seasonSeqMap: Record<string, number> = {}
   if (season && members && members.length > 0) {
-    const { data: attRecords } = await supabase
-      .from('attendance_records')
-      .select('member_id')
-      .eq('season_id', season.id)
-      .eq('checked_in', true)
-      .in('member_id', members.map(m => m.id))
+    const [{ data: attRecords }, { data: adjustments }] = await Promise.all([
+      supabase
+        .from('attendance_records')
+        .select('member_id')
+        .eq('season_id', season.id)
+        .eq('checked_in', true)
+        .in('member_id', members.map(m => m.id)),
+      supabase
+        .from('member_season_adjustments')
+        .select('member_id, prior_attendance_count')
+        .eq('season_id', season.id)
+        .in('member_id', members.map(m => m.id)),
+    ])
     attRecords?.forEach(r => {
       seasonSeqMap[r.member_id] = (seasonSeqMap[r.member_id] ?? 0) + 1
+    })
+    // 併入「本季系統外已出席次數」校正，讓報名頁的牌位預覽跟實際打卡收費一致
+    adjustments?.forEach(adj => {
+      seasonSeqMap[adj.member_id] = (seasonSeqMap[adj.member_id] ?? 0) + adj.prior_attendance_count
     })
   }
 

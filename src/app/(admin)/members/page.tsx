@@ -33,16 +33,26 @@ async function getMembers() {
       .select('member_id, total_owed'),
   ])
 
-  // ── Batch 2：出席紀錄（需要 season.id，故接在 Batch 1 後）────────────
+  // ── Batch 2：出席紀錄 + 本季系統外已出席次數校正（需要 season.id，故接在 Batch 1 後）
   let attendanceCounts: Record<string, number> = {}
   if (season) {
-    const { data: att } = await supabase
-      .from('attendance_records')
-      .select('member_id')
-      .eq('season_id', season.id)
-      .eq('checked_in', true)
+    const [{ data: att }, { data: adjustments }] = await Promise.all([
+      supabase
+        .from('attendance_records')
+        .select('member_id')
+        .eq('season_id', season.id)
+        .eq('checked_in', true),
+      supabase
+        .from('member_season_adjustments')
+        .select('member_id, prior_attendance_count')
+        .eq('season_id', season.id),
+    ])
     att?.forEach(a => {
       attendanceCounts[a.member_id] = (attendanceCounts[a.member_id] ?? 0) + 1
+    })
+    // 併入「本季系統外已出席次數」校正，讓牌位與此頁顯示的次數跟會員詳情頁一致
+    adjustments?.forEach(adj => {
+      attendanceCounts[adj.member_id] = (attendanceCounts[adj.member_id] ?? 0) + adj.prior_attendance_count
     })
   }
 
