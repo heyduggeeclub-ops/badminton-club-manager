@@ -20,10 +20,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const { id } = await params
   const supabase = await createClient()
 
-  // ── Batch 1：activity、registrations、financials 全部並行（只需 id）──
+  // ── Batch 1：activity、registrations、attendance、financials 全部並行（只需 id）──
   const [
     { data: activity },
     { data: regs },
+    { data: attendanceRows },
     { data: financials },
   ] = await Promise.all([
     supabase
@@ -38,6 +39,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       .in('status', ['confirmed', 'promoted', 'waitlist'])
       .order('registered_at', { ascending: true }),
     supabase
+      .from('attendance_records')
+      .select('id, member_id, season_sequence, fee_amount, paid_amount, payment_status, checked_in_at')
+      .eq('activity_id', id)
+      .eq('checked_in', true)
+      .order('checked_in_at', { ascending: true }),
+    supabase
       .from('activity_financials')
       .select('*')
       .eq('activity_id', id)
@@ -46,8 +53,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   if (!activity) notFound()
 
-  // ── Batch 2：members（需要 regs 的 memberIds）─────────────────────
-  const memberIds = [...new Set((regs ?? []).map(r => r.member_id))]
+  // ── Batch 2：members（報名與到場者可能不完全相同）────────────────
+  const memberIds = [...new Set([
+    ...(regs ?? []).map(r => r.member_id),
+    ...(attendanceRows ?? []).map(r => r.member_id),
+  ])]
 
   let memberMap: Record<string, { name: string; gender: string }> = {}
   if (memberIds.length > 0) {
@@ -66,6 +76,17 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const confirmed = registrations.filter(r => r.status === 'confirmed' || r.status === 'promoted')
   const waitlist  = registrations.filter(r => r.status === 'waitlist')
+  const attendance = (attendanceRows ?? []).map(record => ({
+    ...record,
+    member: memberMap[record.member_id] ?? null,
+  }))
+
+  const paymentStatus: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' | 'gray' }> = {
+    paid: { label: '已收', variant: 'success' },
+    partial: { label: '部分', variant: 'warning' },
+    pending: { label: '未收', variant: 'danger' },
+    waived: { label: '免除', variant: 'gray' },
+  }
 
   const maxCapacity = activity.court_count * activity.max_per_court
 
@@ -258,6 +279,49 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           </CardBody>
         </Card>
       </div>
+
+      {/* Attendance fee details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold text-gray-800">本次收費明細</h2>
+            <span className="text-sm text-gray-500">{attendance.length} 人到場</span>
+          </div>
+        </CardHeader>
+        <CardBody className="p-0">
+          {attendance.length > 0 ? (
+            <ul className="divide-y divide-gray-100">
+              {attendance.map((record, idx) => {
+                const status = paymentStatus[record.payment_status] ?? paymentStatus.pending
+                return (
+                  <li key={record.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3">
+                    <span className="text-xs text-gray-400 row-span-2 w-5">{idx + 1}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-800 truncate">
+                        {record.member?.name ?? '未知會員'}
+                      </span>
+                      {record.season_sequence && (
+                        <span className="text-xs text-gray-400">本季第 {record.season_sequence} 次</span>
+                      )}
+                    </div>
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                    <div className="col-start-2 col-span-2 flex items-center justify-between gap-4 text-xs">
+                      <span className="text-gray-500">
+                        應收 <strong className="font-semibold text-gray-700">{formatCurrency(record.fee_amount ?? 0)}</strong>
+                      </span>
+                      <span className="text-gray-500">
+                        實收 <strong className="font-semibold text-green-600">{formatCurrency(record.paid_amount ?? 0)}</strong>
+                      </span>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">尚無到場與收費紀錄</p>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Financials — 所有狀態都顯示 */}
       {financials && (

@@ -7,6 +7,7 @@
 
 - 資料庫 migrations 已至 `013`（另有 `010a`），管理端模組（活動、報名、出席、會員、收費規則、財務、操作紀錄、匯出）皆已有對應路由與 Server Actions 實作
 - 近期開發重點：行動裝置版 UX（BottomNav、卡片式列表）、多筆查詢效能優化（`Promise.all` 減少 RTT）
+- 活動詳情已顯示本次到場人員的應收、實收與付款狀態
 - `AGENTS.md`／`CLAUDE.md` 已於 2026-07-09 建立，作為 Claude Code／Codex 共用規則檔
 - 完整逐筆進度請看程式碼 git log，不在此重複列出
 
