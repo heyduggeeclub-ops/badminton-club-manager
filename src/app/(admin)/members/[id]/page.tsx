@@ -72,6 +72,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       p_fee_rule_id: activeFeeRule.id,
       p_gender: member.gender,
       p_season_sequence: currentSeasonSequence + 1,
+      p_role: member.role,
     })
     nextFeeAmount = fee ?? null
   }
@@ -124,7 +125,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           actions={
             <div className="flex gap-2">
               <Badge variant={statusVariant[member.status as string]}>{STATUS_LABELS[member.status as MemberStatus]}</Badge>
-              <Badge variant={member.role === 'leader' ? 'default' : member.role === 'vice_leader' ? 'info' : 'gray'}>
+              <Badge variant={member.role === 'leader' ? 'default' : member.role === 'vice_leader' ? 'info' : member.role === 'guest' ? 'warning' : 'gray'}>
                 {ROLE_LABELS[member.role as MemberRole]}
               </Badge>
             </div>
@@ -210,6 +211,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                   <option value="member">會員</option>
                   <option value="vice_leader">副團長</option>
                   <option value="leader">團長</option>
+                  <option value="guest">臨打（非會員）</option>
                 </Select>
               </div>
               <Select label="狀態" name="status" defaultValue={member.status}>

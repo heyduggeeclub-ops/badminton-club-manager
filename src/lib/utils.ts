@@ -54,12 +54,14 @@ const GOLD_TIER: MemberTier = {
 }
 
 // Calculate member tier from season attendance count (and role).
-// 團長/副團長 always show Gold; others: 1→Bronze, 2→Silver, 3+→Gold
+// 團長/副團長 always show Gold；臨打（guest）不參與階梯，不顯示牌位；
+// 其他一般會員：1→Bronze, 2→Silver, 3+→Gold
 export function getMemberTier(
   seasonSequence: number | null | undefined,
   role?: string | null
 ): MemberTier | null {
   if (role === 'leader' || role === 'vice_leader') return GOLD_TIER
+  if (role === 'guest') return null
   if (!seasonSequence || seasonSequence < 1) return null
   if (seasonSequence === 1) return {
     emoji: String.fromCodePoint(0x1F949), label: '銅牌',

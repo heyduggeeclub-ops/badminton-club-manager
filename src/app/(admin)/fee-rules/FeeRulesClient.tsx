@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { createFeeRule, updateFeeRuleTiers, setFeeRuleActive, updateFeeRule, updateFeeRuleRoleFees } from '@/lib/actions/fee-rules'
+import { createFeeRule, updateFeeRuleTiers, setFeeRuleActive, updateFeeRule, updateFeeRuleRoleFees, updateFeeRuleGuestFees } from '@/lib/actions/fee-rules'
 import type { FeeRule, FeeRuleTier } from '@/types'
 
 export interface FeeRuleWithTiers extends FeeRule {
@@ -145,6 +145,65 @@ function RoleFeesSection({ rule, onSaved }: { rule: FeeRuleWithTiers; onSaved: (
           className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
           {isPending ? '儲存中…' : '儲存幹部費用'}
+        </button>
+        {saved && <span className="text-sm text-green-600 font-medium">✓ 已儲存</span>}
+      </div>
+    </div>
+  )
+}
+
+// ── 臨打（非會員）固定費用設定 ──────────────────────────────
+function GuestFeesSection({ rule, onSaved }: { rule: FeeRuleWithTiers; onSaved: () => void }) {
+  const [maleFee, setMaleFee]     = useState<string>(String(rule.guest_fee_male))
+  const [femaleFee, setFemaleFee] = useState<string>(String(rule.guest_fee_female))
+  const [isPending, startTransition] = useTransition()
+  const [saved, setSaved]         = useState(false)
+
+  function handleSave() {
+    startTransition(async () => {
+      await updateFeeRuleGuestFees(
+        rule.id,
+        maleFee   !== '' ? Number(maleFee)   : 0,
+        femaleFee !== '' ? Number(femaleFee) : 0,
+      )
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+      onSaved()
+    })
+  }
+
+  return (
+    <div className="mt-5 pt-4 border-t border-gray-100">
+      <p className="text-sm font-semibold text-gray-700 mb-1">臨打費用（非會員）</p>
+      <p className="text-xs text-gray-400 mb-3">外部臨打的人不算會員的本季出席次序，固定收取此金額，不走階梯。</p>
+      <div className="grid grid-cols-2 gap-4">
+        {[
+          { label: '男性', value: maleFee, set: setMaleFee },
+          { label: '女性', value: femaleFee, set: setFemaleFee },
+        ].map(({ label, value, set }) => (
+          <div key={label} className="min-w-0">
+            <p className="text-xs font-medium text-gray-500 mb-1.5">{label}</p>
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden min-w-0">
+              <span className="px-2 text-xs text-gray-400 bg-gray-50 border-r border-gray-200 py-2 flex-shrink-0">$</span>
+              <input
+                type="number"
+                value={value}
+                onChange={e => set(e.target.value)}
+                min={0}
+                step={10}
+                className="flex-1 min-w-0 px-2 py-2 text-sm text-gray-800 focus:outline-none"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {isPending ? '儲存中…' : '儲存臨打費用'}
         </button>
         {saved && <span className="text-sm text-green-600 font-medium">✓ 已儲存</span>}
       </div>
@@ -350,6 +409,12 @@ export function FeeRulesClient({ rules: initialRules }: Props) {
 
               {/* 幹部固定費用 */}
               <RoleFeesSection
+                rule={rule}
+                onSaved={() => {/* revalidated on server */}}
+              />
+
+              {/* 臨打（非會員）固定費用 */}
+              <GuestFeesSection
                 rule={rule}
                 onSaved={() => {/* revalidated on server */}}
               />

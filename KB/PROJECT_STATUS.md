@@ -5,7 +5,8 @@
 
 ## 目前進度
 
-- 資料庫 migrations 已至 `013`（另有 `010a`），管理端模組（活動、報名、出席、會員、收費規則、財務、操作紀錄、匯出）皆已有對應路由與 Server Actions 實作
+- 資料庫 migrations 已至 `014`（另有 `010a`），管理端模組（活動、報名、出席、會員、收費規則、財務、操作紀錄、匯出）皆已有對應路由與 Server Actions 實作
+- 2026-07-11：新增「臨打費用（非會員）」功能，詳見 `FEATURES.md`／`DECISIONS.md`；migration `014_guest_fee.sql` 尚未在 Supabase 執行，待手動貼到 SQL Editor 跑過（本次僅完成程式碼與 SQL 檔案，未連線資料庫驗證）
 - 近期開發重點：行動裝置版 UX（BottomNav、卡片式列表）、多筆查詢效能優化（`Promise.all` 減少 RTT）
 - 活動詳情已顯示本次到場人員的應收、實收與付款狀態
 - `AGENTS.md`／`CLAUDE.md` 已於 2026-07-09 建立，作為 Claude Code／Codex 共用規則檔
@@ -24,6 +25,7 @@
 - 待確認：`settings` 頁面功能範圍是否已完整（見 `FEATURES.md`）
 - 待確認：是否需要將 `01_PRD`／`02_Database`／`03_Wireframe` 內容與目前程式重新逐項核對
 - 待確認：正式部署環境資訊需補齊（見 `DEPLOYMENT.md`）
+- **待辦**：`014_guest_fee.sql` 尚未在 Supabase 執行；執行後需跑一次 `npm run build` + 手動操作驗證（新增一位角色為「臨打」的會員 → 報名／打卡 → 確認費用套用 `fee_rules.guest_fee_male`／`guest_fee_female`，且不受該會員之前出席次數影響）。本次修改在開發環境的沙箱中因缺少 Linux 版 SWC 執行檔與網路存取，無法執行 `npm run build`，僅以人工逐檔重讀程式碼確認語法正確，尚未實際建置或連線資料庫驗證
 
 ## 更新方式
 

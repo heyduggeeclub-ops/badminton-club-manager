@@ -31,7 +31,7 @@ function csvResponse(csv: string, filename: string) {
 }
 
 const GENDER: Record<string, string> = { male: '男', female: '女' }
-const ROLE: Record<string, string> = { member: '會員', vice_leader: '副團長', leader: '團長' }
+const ROLE: Record<string, string> = { member: '會員', vice_leader: '副團長', leader: '團長', guest: '臨打' }
 const STATUS: Record<string, string> = { active: '正式', pending: '待確認', inactive: '停用' }
 const PAY_STATUS: Record<string, string> = { paid: '已收', pending: '未收', partial: '部分', waived: '免除' }
 const ACT_STATUS: Record<string, string> = { draft: '草稿', open: '開放', closed: '截止', completed: '完成', cancelled: '取消' }

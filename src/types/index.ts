@@ -3,7 +3,7 @@
 // ============================================================
 
 export type Gender = 'male' | 'female'
-export type MemberRole = 'member' | 'vice_leader' | 'leader'
+export type MemberRole = 'member' | 'vice_leader' | 'leader' | 'guest'
 export type MemberStatus = 'active' | 'inactive' | 'pending'
 export type ActivityStatus = 'draft' | 'open' | 'closed' | 'completed' | 'cancelled'
 export type RegistrationStatus = 'confirmed' | 'waitlist' | 'cancelled' | 'promoted'
@@ -49,6 +49,8 @@ export interface FeeRule {
   created_at: string
   leader_fee: number | null
   vice_leader_fee: number | null
+  guest_fee_male: number
+  guest_fee_female: number
 }
 
 export interface FeeRuleTier {
@@ -262,6 +264,7 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
   member: '會員',
   vice_leader: '副團長',
   leader: '團長',
+  guest: '臨打',
 }
 
 export const STATUS_LABELS: Record<MemberStatus, string> = {

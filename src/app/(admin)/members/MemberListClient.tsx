@@ -23,10 +23,11 @@ const statusVariant: Record<string, 'success' | 'warning' | 'gray'> = {
   inactive: 'gray',
 }
 
-const roleVariant: Record<string, 'default' | 'info' | 'gray'> = {
+const roleVariant: Record<string, 'default' | 'info' | 'gray' | 'warning'> = {
   leader: 'default',
   vice_leader: 'info',
   member: 'gray',
+  guest: 'warning',
 }
 
 type StatusTab = 'all' | 'active' | 'inactive'

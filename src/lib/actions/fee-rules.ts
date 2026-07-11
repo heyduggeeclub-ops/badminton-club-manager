@@ -140,6 +140,21 @@ export async function updateFeeRuleRoleFees(
   revalidatePath('/fee-rules')
 }
 
+// ── 更新臨打（非會員）固定費用 ───────────────────────────────
+export async function updateFeeRuleGuestFees(
+  id: string,
+  guestFeeMale: number,
+  guestFeeFemale: number
+) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('fee_rules')
+    .update({ guest_fee_male: guestFeeMale, guest_fee_female: guestFeeFemale } as any)
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/fee-rules')
+}
+
 // ── 啟用 / 停用規則 ────────────────────────────────────────
 export async function setFeeRuleActive(id: string, isActive: boolean) {
   const supabase = await createClient()

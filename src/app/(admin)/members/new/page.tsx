@@ -54,6 +54,7 @@ export default async function NewMemberPage() {
                 <option value="member">會員</option>
                 <option value="vice_leader">副團長</option>
                 <option value="leader">團長</option>
+                <option value="guest">臨打（非會員）</option>
               </Select>
             </div>
             <Textarea
