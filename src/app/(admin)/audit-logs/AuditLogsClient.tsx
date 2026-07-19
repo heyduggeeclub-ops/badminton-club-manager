@@ -24,6 +24,7 @@ const ACTION_LABELS: Record<string, string> = {
   delete_expense:           '刪除支出',
   update_fee_rule_tiers:    '更新費率',
   recalculate_sequence:     '重算順序',
+  set_member_season_adjustment: '出席次數校正',
 }
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -34,6 +35,70 @@ const ENTITY_LABELS: Record<string, string> = {
   payment:      '收費',
   expense:      '支出',
   fee_rule:     '收費規則',
+  member_season_adjustment: '出席校正',
+}
+
+// 變更摘要的欄位中文名
+const FIELD_LABELS: Record<string, string> = {
+  name: '姓名', display_name: '暱稱', gender: '性別', role: '角色', status: '狀態',
+  phone: '電話', line_id: 'LINE', notes: '備註', deactivation_reason: '停用原因',
+  activity_date: '日期', start_time: '開始', end_time: '結束', venue_name: '場地',
+  court_count: '場地數', max_per_court: '每場人數',
+  amount: '金額', category: '類別', description: '說明', expense_date: '支出日期',
+  prior_attendance_count: '系統外出席次數', note: '備註',
+  payment_method: '付款方式', paid_amount: '實收金額',
+  leader_fee: '團長費用', vice_leader_fee: '副團長費用',
+  guest_fee_male: '臨打費（男）', guest_fee_female: '臨打費（女）',
+  effective_from: '生效日', effective_to: '失效日', is_active: '啟用',
+  attendance_from: '次數起', attendance_to: '次數迄',
+  waitlist_position: '候補順位', raw_name: '原始姓名', cancelled_reason: '取消原因',
+}
+
+// 變更摘要的欄位值中文化（enum → 中文）
+const VALUE_LABELS: Record<string, string> = {
+  male: '男', female: '女',
+  member: '會員', vice_leader: '副團長', leader: '團長', guest: '臨打',
+  active: '在籍', inactive: '停用', pending: '待確認',
+  draft: '草稿', open: '報名中', closed: '截止', completed: '已完成', cancelled: '已取消',
+  confirmed: '已報名', waitlist: '候補', promoted: '候補晉升',
+  paid: '已付', partial: '部分付款', waived: '免收',
+  cash: '現金', transfer: '轉帳', other: '其他',
+  venue_rental: '場地費', shuttlecock: '羽球', drinks: '飲料', prizes: '獎品',
+}
+
+// 不顯示在摘要中的技術欄位
+const SKIP_FIELDS = new Set([
+  'id', 'user_id', 'season_id', 'fee_rule_id', 'activity_id', 'member_id',
+  'created_by', 'registered_by', 'actor_id', 'entity_id',
+  'created_at', 'updated_at', 'deactivated_at', 'promoted_at', 'cancelled_at', 'registered_at',
+])
+
+function fmtValue(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '—'
+  if (typeof v === 'boolean') return v ? '是' : '否'
+  const s = String(v)
+  return VALUE_LABELS[s] ?? s
+}
+
+/** 把 old_data / new_data 轉成人話摘要：
+ *  有 old_data（更新類）→ 只列實際變動的欄位「欄位：舊 → 新」
+ *  無 old_data（新增類）→ 列出有值的欄位「欄位：值」 */
+function summarizeChange(log: AuditLog): string {
+  const nd = log.new_data
+  if (!nd || Object.keys(nd).length === 0) return ''
+  const od = log.old_data
+  const entries = Object.entries(nd).filter(([k]) => !SKIP_FIELDS.has(k))
+
+  if (od && Object.keys(od).length > 0) {
+    return entries
+      .filter(([k, v]) => JSON.stringify(od[k] ?? null) !== JSON.stringify(v ?? null))
+      .map(([k, v]) => `${FIELD_LABELS[k] ?? k}：${fmtValue(od[k])} → ${fmtValue(v)}`)
+      .join('、')
+  }
+  return entries
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${FIELD_LABELS[k] ?? k}：${fmtValue(v)}`)
+    .join('、')
 }
 
 function actionVariant(action: string): string {
@@ -170,12 +235,14 @@ export function AuditLogsClient({ logs, total, page, pageSize, search, dateFrom,
                       </div>
 
                       {/* 變更摘要 */}
-                      {log.new_data && Object.keys(log.new_data).length > 0 && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">
-                          {JSON.stringify(log.new_data).slice(0, 80)}
-                          {JSON.stringify(log.new_data).length > 80 ? '…' : ''}
-                        </p>
-                      )}
+                      {(() => {
+                        const summary = summarizeChange(log)
+                        return summary ? (
+                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2" title={summary}>
+                            {summary}
+                          </p>
+                        ) : null
+                      })()}
                     </div>
 
                     {/* 時間 */}
